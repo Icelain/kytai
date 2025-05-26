@@ -1,7 +1,7 @@
 [package]
-name = "kytan"
+name = "kymach"
 version = "0.1.1"
-authors = ["Chang Lan <me@changlan.org>"]
+authors = ["Chang Lan <me@changlan.org>", "Icelain <icelain@ice.computer>"]
 edition = "2018"
 
 [dependencies]
