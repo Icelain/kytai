@@ -15,7 +15,7 @@
 use std::mem;
 use std::num::Wrapping;
 
-#[repr(packed)]
+#[repr(Rust, packed)]
 pub struct Ipv4Header {
     pub version_ihl: u8,            // IP version (= 4) + Internet header length
     pub type_of_service: u8,        // Type of service
@@ -29,7 +29,7 @@ pub struct Ipv4Header {
     pub destination_address: u32,   // Destination Address
 }
 
-#[repr(packed)]
+#[repr(Rust, packed)]
 pub struct UdpHeader {
     pub source_port: u16,
     pub destination_port: u16,
@@ -37,7 +37,7 @@ pub struct UdpHeader {
     pub checksum: u16,
 }
 
-#[repr(packed)]
+#[repr(Rust, packed)]
 pub struct TcpHeader {
     pub source_port: u16,
     pub destination_port: u16,
@@ -50,7 +50,7 @@ pub struct TcpHeader {
     pub urg_ptr: u16,
 }
 
-#[repr(packed)]
+#[repr(Rust, packed)]
 pub struct IcmpHeader {
     pub icmp_type: u8,
     pub icmp_code: u8,
@@ -80,14 +80,10 @@ fn raw_cksum<T>(buf: *const T, len: usize) -> u16 {
 
 pub fn ipv4_cksum(buf: &Ipv4Header) -> u16 {
     let cksum = raw_cksum(buf as *const Ipv4Header, mem::size_of::<Ipv4Header>());
-    if cksum == 0xffff {
-        cksum
-    } else {
-        !cksum
-    }
+    if cksum == 0xffff { cksum } else { !cksum }
 }
 
-#[repr(packed)]
+#[repr(Rust, packed)]
 struct Ipv4PseudoHeader {
     pub source_address: u32,      // Source Address
     pub destination_address: u32, // Destination Address
