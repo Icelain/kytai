@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use libc;
 use log::info;
 use std::process::Command;
 
@@ -62,9 +61,9 @@ impl DefaultGateway {
             set_default_gateway(gateway).unwrap();
         }
         DefaultGateway {
-            origin: origin,
+            origin,
             remote: String::from(remote),
-            default: default,
+            default,
         }
     }
 }

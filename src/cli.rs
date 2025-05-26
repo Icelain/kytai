@@ -1,4 +1,3 @@
-use clap;
 use clap::{App, Arg, SubCommand};
 use std::net::{IpAddr, Ipv4Addr};
 use std::str::FromStr;
@@ -98,15 +97,15 @@ pub fn get_args() -> Result<Args, String> {
     if let Some(matches) = matches.subcommand_matches("client") {
         let ip_str = matches
             .value_of("server")
-            .ok_or_else(|| "can not find client host value")
+            .ok_or("can not find client host value")
             .unwrap();
         let port_str = matches
             .value_of("port")
-            .ok_or_else(|| "can not find client port value")
+            .ok_or("can not find client port value")
             .unwrap();
         let key_str = matches
             .value_of("key")
-            .ok_or_else(|| "can not find client key value")
+            .ok_or("can not find client key value")
             .unwrap();
         // let remote_addr = IpAddr::V4(Ipv4Addr::from_str(ip_str).map_err(|e| e.to_string())?);
         let port = port_str.parse::<u16>().map_err(|e| e.to_string())?;
@@ -116,34 +115,34 @@ pub fn get_args() -> Result<Args, String> {
         };
         Ok(Args::Client(Client {
             remote_addr: ip_str.to_string(),
-            port: port,
+            port,
             key: key_str.to_string(),
-            default_route: default_route,
+            default_route,
         }))
     } else if let Some(matches) = matches.subcommand_matches("server") {
         let ip_str = matches
             .value_of("bind")
-            .ok_or_else(|| "can not find server host value")
+            .ok_or("can not find server host value")
             .unwrap();
         let port_str = matches
             .value_of("port")
-            .ok_or_else(|| "can not find server port value")
+            .ok_or("can not find server port value")
             .unwrap();
         let key_str = matches
             .value_of("key")
-            .ok_or_else(|| "can not find server key value")
+            .ok_or("can not find server key value")
             .unwrap();
         let dns = matches
             .value_of("dns")
-            .ok_or_else(|| "can not find dns value")?;
+            .ok_or("can not find dns value")?;
         // let bind_addr = IpAddr::V4(Ipv4Addr::from_str(ip_str).map_err(|e| e.to_string())?);
         let dns = IpAddr::V4(Ipv4Addr::from_str(dns).map_err(|e| e.to_string())?);
         let port = port_str.parse::<u16>().map_err(|e| e.to_string())?;
         Ok(Args::Server(Server {
             bind_addr: ip_str.to_string(),
-            port: port,
+            port,
             key: key_str.to_string(),
-            dns: dns,
+            dns,
         }))
     } else {
         unimplemented!()

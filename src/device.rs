@@ -17,7 +17,7 @@ use std::io::{Read, Write};
 use std::os::unix::io::{AsRawFd, RawFd};
 use std::{fs, io, process};
 
-const MTU: &'static str = "1380";
+const MTU: &str = "1380";
 
 #[cfg(target_os = "linux")]
 use std::path;
@@ -49,7 +49,7 @@ const UTUN_OPT_IFNAME: c_int = 2;
 #[cfg(target_os = "macos")]
 const CTLIOCGINFO: c_ulong = 0xc0644e03; // TODO: use _IOWR('N', 3, struct ctl_info)
 #[cfg(target_os = "macos")]
-const UTUN_CONTROL_NAME: &'static str = "com.apple.net.utun_control";
+const UTUN_CONTROL_NAME: &str = "com.apple.net.utun_control";
 
 #[cfg(target_os = "linux")]
 #[repr(C)]
@@ -190,7 +190,7 @@ impl Tun {
         }
 
         let tun = Tun {
-            handle: handle,
+            handle,
             if_name: {
                 let len = name_buf.iter().position(|&r| r == 0).unwrap();
                 String::from_utf8(name_buf[..len].to_vec()).unwrap()
@@ -260,7 +260,7 @@ impl Read for Tun {
         match result {
             Ok(len) => {
                 buf[..len - 4].clone_from_slice(&data[4..len]);
-                Ok(if len > 4 { len - 4 } else { 0 })
+                Ok(len.saturating_sub(4))
             }
             Err(e) => Err(e),
         }
@@ -283,7 +283,7 @@ impl Write for Tun {
         };
         data.write_all(buf).unwrap();
         match self.handle.write(&data) {
-            Ok(len) => Ok(if len > 4 { len - 4 } else { 0 }),
+            Ok(len) => Ok(len.saturating_sub(4)),
             Err(e) => Err(e),
         }
     }

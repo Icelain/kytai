@@ -18,8 +18,6 @@ mod network;
 mod packet;
 mod utils;
 
-use env_logger;
-use libc;
 use std::sync::atomic::Ordering;
 
 extern "C" fn handle_signal(_: libc::c_int) {

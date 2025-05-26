@@ -16,14 +16,10 @@ use crate::device;
 use crate::utils;
 use bincode::config::standard;
 use bincode::serde::{decode_from_slice, encode_to_vec};
-use dns_lookup;
-use env_logger::fmt::ConfigurableFormat;
 use log::{info, warn};
-use mio;
 use rand::{thread_rng, Rng};
 use ring::{aead, pbkdf2};
 use serde_derive::{Deserialize, Serialize};
-use snap;
 use std::io::{Read, Write};
 use std::net::{IpAddr, SocketAddr, UdpSocket};
 use std::num::NonZeroU32;
@@ -58,7 +54,7 @@ const SOCK: mio::Token = mio::Token(1);
 
 fn resolve(host: &str) -> Result<IpAddr, String> {
     let ip_list = dns_lookup::lookup_host(host).map_err(|_| "dns_lookup::lookup_host")?;
-    Ok(ip_list.first().unwrap().clone())
+    Ok(*ip_list.first().unwrap())
 }
 
 fn create_tun_attempt() -> device::Tun {
@@ -85,9 +81,8 @@ fn derive_keys(password: &str) -> aead::LessSafeKey {
         password.as_bytes(),
         &mut key,
     );
-    let less_safe_key =
-        aead::LessSafeKey::new(aead::UnboundKey::new(&aead::AES_256_GCM, &key).unwrap());
-    less_safe_key
+    
+    aead::LessSafeKey::new(aead::UnboundKey::new(&aead::AES_256_GCM, &key).unwrap())
 }
 
 fn initiate(
@@ -139,11 +134,11 @@ pub fn connect(host: &str, port: u16, default: bool, secret: &str) {
     info!("Remote server: {}", remote_addr);
 
     let local_addr: SocketAddr = "0.0.0.0:0".parse::<SocketAddr>().unwrap();
-    let socket = UdpSocket::bind(&local_addr).unwrap();
+    let socket = UdpSocket::bind(local_addr).unwrap();
 
     let key = derive_keys(secret);
 
-    let (id, token, dns) = initiate(&socket, &remote_addr, &secret).unwrap();
+    let (id, token, dns) = initiate(&socket, &remote_addr, secret).unwrap();
     info!(
         "Session established with token {}. Assigned IP address: 10.10.10.{}. dns: {}",
         token, id, dns
@@ -243,8 +238,8 @@ pub fn connect(host: &str, port: u16, default: bool, secret: &str) {
                     let len: usize = tun.read(&mut buf).unwrap();
                     let data = &buf[0..len];
                     let msg = Message::Data {
-                        id: id,
-                        token: token,
+                        id,
+                        token,
                         data: encoder.compress_vec(data).unwrap(),
                     };
                     let encoded_msg = encode_to_vec(&msg, standard()).unwrap();
@@ -409,7 +404,7 @@ pub fn serve(port: u16, secret: &str, dns: IpAddr) {
                         Some(&(token, addr)) => {
                             let msg = Message::Data {
                                 id: client_id,
-                                token: token,
+                                token,
                                 data: encoder.compress_vec(data).unwrap(),
                             };
                             let encoded_msg = encode_to_vec(&msg, standard()).unwrap();
