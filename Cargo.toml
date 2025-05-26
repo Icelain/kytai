@@ -1,5 +1,5 @@
 [package]
-name = "kymach"
+name = "kytai"
 version = "0.1.1"
 authors = ["Chang Lan <me@changlan.org>", "Icelain <icelain@ice.computer>"]
 edition = "2018"
