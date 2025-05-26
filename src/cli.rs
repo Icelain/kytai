@@ -3,7 +3,6 @@ use clap::{App, Arg, SubCommand};
 use std::net::{IpAddr, Ipv4Addr};
 use std::str::FromStr;
 
-
 #[derive(Debug, Clone)]
 pub struct Server {
     pub bind_addr: String,

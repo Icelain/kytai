@@ -12,17 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+mod cli;
 mod device;
-mod utils;
 mod network;
 mod packet;
-mod cli;
+mod utils;
 
-
-use std::sync::atomic::Ordering;
 use env_logger;
 use libc;
-
+use std::sync::atomic::Ordering;
 
 extern "C" fn handle_signal(_: libc::c_int) {
     network::INTERRUPTED.store(true, Ordering::Relaxed);
@@ -35,14 +33,18 @@ fn main() {
         panic!("Please run as root");
     }
 
-
     unsafe {
         libc::signal(libc::SIGINT, handle_signal as libc::sighandler_t);
         libc::signal(libc::SIGTERM, handle_signal as libc::sighandler_t);
     }
 
     match cli::get_args().unwrap() {
-        cli::Args::Client(client) => network::connect(&client.remote_addr, client.port, client.default_route, &client.key),
+        cli::Args::Client(client) => network::connect(
+            &client.remote_addr,
+            client.port,
+            client.default_route,
+            &client.key,
+        ),
         cli::Args::Server(server) => network::serve(server.port, &server.key, server.dns),
     }
 

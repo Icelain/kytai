@@ -14,8 +14,10 @@
 
 use crate::device;
 use crate::utils;
-use bincode::{deserialize, serialize};
+use bincode::config::standard;
+use bincode::serde::{decode_from_slice, encode_to_vec};
 use dns_lookup;
+use env_logger::fmt::ConfigurableFormat;
 use log::{info, warn};
 use mio;
 use rand::{thread_rng, Rng};
@@ -95,7 +97,8 @@ fn initiate(
 ) -> Result<(Id, Token, String), String> {
     let key = derive_keys(secret);
     let req_msg = Message::Request;
-    let encoded_req_msg: Vec<u8> = serialize(&req_msg).map_err(|e| e.to_string())?;
+    let encoded_req_msg: Vec<u8> =
+        encode_to_vec(&req_msg, standard()).map_err(|e| e.to_string())?;
     let mut encrypted_req_msg = encoded_req_msg.clone();
     encrypted_req_msg.resize(encoded_req_msg.len() + key.algorithm().tag_len(), 0);
     let (aad, nonce) = generate_add_nonce(secret);
@@ -120,7 +123,9 @@ fn initiate(
     let decrypted_buf = key.open_in_place(nonce, aad, &mut buf[0..len]).unwrap();
 
     let dlen = decrypted_buf.len();
-    let resp_msg: Message = deserialize(&decrypted_buf[0..dlen]).map_err(|e| e.to_string())?;
+    let resp_msg_payload: (Message, usize) =
+        decode_from_slice(&decrypted_buf[0..dlen], standard()).map_err(|e| e.to_string())?;
+    let resp_msg = resp_msg_payload.0;
     match resp_msg {
         Message::Response { id, token, dns } => Ok((id, token, dns)),
         _ => Err(format!("Invalid message {:?} from {}", resp_msg, addr)),
@@ -200,7 +205,9 @@ pub fn connect(host: &str, port: u16, default: bool, secret: &str) {
 
                     let decrypted_buf = key.open_in_place(nonce, aad, &mut buf[0..len]).unwrap();
                     let dlen = decrypted_buf.len();
-                    let msg: Message = deserialize(&decrypted_buf[0..dlen]).unwrap();
+                    let msg_payload: (Message, usize) =
+                        decode_from_slice(&decrypted_buf[0..dlen], standard()).unwrap();
+                    let msg = msg_payload.0;
                     match msg {
                         Message::Request
                         | Message::Response {
@@ -240,7 +247,8 @@ pub fn connect(host: &str, port: u16, default: bool, secret: &str) {
                         token: token,
                         data: encoder.compress_vec(data).unwrap(),
                     };
-                    let encoded_msg = serialize(&msg).unwrap();
+                    let encoded_msg = encode_to_vec(&msg, standard()).unwrap();
+
                     let mut encrypted_msg = encoded_msg.clone();
                     encrypted_msg.resize(encoded_msg.len() + key.algorithm().tag_len(), 0);
                     let (aad, nonce) = generate_add_nonce(secret);
@@ -325,7 +333,10 @@ pub fn serve(port: u16, secret: &str, dns: IpAddr) {
                     let (aad, nonce) = generate_add_nonce(secret);
                     let decrypted_buf = key.open_in_place(nonce, aad, &mut buf[0..len]).unwrap();
                     let dlen = decrypted_buf.len();
-                    let msg: Message = deserialize(&decrypted_buf[0..dlen]).unwrap();
+                    let msg_payload =
+                        decode_from_slice(&decrypted_buf[0..dlen], standard()).unwrap();
+                    let msg = msg_payload.0;
+
                     match msg {
                         Message::Request => {
                             let client_id: Id = available_ids.pop().unwrap();
@@ -343,7 +354,7 @@ pub fn serve(port: u16, secret: &str, dns: IpAddr) {
                                 token: client_token,
                                 dns: dns.to_string(),
                             };
-                            let encoded_reply = serialize(&reply).unwrap();
+                            let encoded_reply = encode_to_vec(&reply, standard()).unwrap();
                             let mut encrypted_reply = encoded_reply.clone();
                             encrypted_reply
                                 .resize(encoded_reply.len() + key.algorithm().tag_len(), 0);
@@ -401,7 +412,7 @@ pub fn serve(port: u16, secret: &str, dns: IpAddr) {
                                 token: token,
                                 data: encoder.compress_vec(data).unwrap(),
                             };
-                            let encoded_msg = serialize(&msg).unwrap();
+                            let encoded_msg = encode_to_vec(&msg, standard()).unwrap();
                             let mut encrypted_msg = encoded_msg.clone();
                             encrypted_msg.resize(encoded_msg.len() + key.algorithm().tag_len(), 0);
                             let (aad, nonce) = generate_add_nonce(secret);

@@ -9,7 +9,6 @@ libc = "*"
 mio = { version = "0.7", features = ["os-util", "os-poll", "udp"] }
 serde = "*"
 serde_derive = "*"
-bincode = "*"
 log = "*"
 env_logger = "*"
 dns-lookup = "*"
@@ -18,4 +17,5 @@ rand = "*"
 transient-hashmap = "*"
 ring = "*"
 clap = "2.33.0"
+bincode = { version = "2.0.1", features = ["alloc", "serde"] }
 
