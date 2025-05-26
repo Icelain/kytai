@@ -17,7 +17,7 @@ use crate::utils;
 use bincode::config::standard;
 use bincode::serde::{decode_from_slice, encode_to_vec};
 use log::{info, warn};
-use rand::{thread_rng, Rng};
+use rand::{Rng, rng};
 use ring::{aead, pbkdf2};
 use serde_derive::{Deserialize, Serialize};
 use std::io::{Read, Write};
@@ -81,7 +81,7 @@ fn derive_keys(password: &str) -> aead::LessSafeKey {
         password.as_bytes(),
         &mut key,
     );
-    
+
     aead::LessSafeKey::new(aead::UnboundKey::new(&aead::AES_256_GCM, &key).unwrap())
 }
 
@@ -300,7 +300,7 @@ pub fn serve(port: u16, secret: &str, dns: IpAddr) {
 
     let mut events = mio::Events::with_capacity(1024);
 
-    let mut rng = thread_rng();
+    let mut rng = rng();
     let mut available_ids: Vec<Id> = (2..254).collect();
     let mut client_info: TransientHashMap<Id, (Token, SocketAddr)> = TransientHashMap::new(60);
 
@@ -335,7 +335,7 @@ pub fn serve(port: u16, secret: &str, dns: IpAddr) {
                     match msg {
                         Message::Request => {
                             let client_id: Id = available_ids.pop().unwrap();
-                            let client_token: Token = rng.gen::<Token>();
+                            let client_token: Token = rng.random::<Token>();
 
                             client_info.insert(client_id, (client_token, addr));
 
