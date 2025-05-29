@@ -192,6 +192,8 @@ pub fn connect(host: &str, port: u16, default: bool, secret: &str) {
             break;
         }
         poll.poll(&mut events, None).unwrap();
+
+        // add in threadpool to manage threading for handling logic
         for event in events.iter() {
             match event.token() {
                 SOCK => {
