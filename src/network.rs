@@ -326,6 +326,8 @@ pub fn serve(port: u16, secret: &str, dns: IpAddr) {
         for event in events.iter() {
             match event.token() {
                 SOCK => {
+                    info!("got a udp packet!");
+
                     let (len, addr) = sockfd.recv_from(&mut buf).unwrap();
                     let (aad, nonce) = generate_add_nonce(secret);
                     let decrypted_buf = key.open_in_place(nonce, aad, &mut buf[0..len]).unwrap();
