@@ -254,8 +254,6 @@ pub fn connect(host: &str, port: u16, default: bool, secret: &str) {
                         .unwrap();
                     let mut sent_len = 0;
 
-                    info!("message for {remote_addr}");
-
                     while sent_len < encrypted_msg.len() {
                         sent_len += sockfd
                             .send_to(&encrypted_msg[sent_len..encrypted_msg.len()], remote_addr)

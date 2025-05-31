@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use log::info;
-use std::process::Command;
+use std::{os::unix::process::ExitStatusExt, process::Command};
 
 pub fn is_root() -> bool {
     unsafe { libc::geteuid() == 0 }
@@ -84,13 +84,13 @@ pub fn delete_route(route_type: RouteType, route: &str) -> Result<(), String> {
         RouteType::Host => "-host",
     };
     info!("Deleting route: {} {}.", mode, route);
-    let status = if cfg!(target_os = "linux") {
+    let output = if cfg!(target_os = "linux") {
         Command::new("route")
             .arg("-n")
             .arg("del")
             .arg(mode)
             .arg(route)
-            .status()
+            .output()
             .unwrap()
     } else if cfg!(target_os = "macos") {
         Command::new("route")
@@ -98,15 +98,15 @@ pub fn delete_route(route_type: RouteType, route: &str) -> Result<(), String> {
             .arg("delete")
             .arg(mode)
             .arg(route)
-            .status()
+            .output()
             .unwrap()
     } else {
         unimplemented!()
     };
-    if status.success() {
+    if output.status.success() || output.status.code().unwrap() == 7 {
         Ok(())
     } else {
-        Err(format!("route: {}", status))
+        Err(format!("route: {}", output.status))
     }
 }
 
@@ -138,10 +138,19 @@ pub fn add_route(route_type: RouteType, route: &str, gateway: &str) -> Result<()
     } else {
         unimplemented!()
     };
-    if (String::from_utf8(output.stdout).unwrap().contains("exists")) || output.status.success() {
+    if (String::from_utf8(output.stderr.clone())
+        .unwrap()
+        .contains("exists"))
+        || output.status.success()
+        || output.status.code().unwrap() == 6
+    {
         Ok(())
     } else {
-        Err(format!("route: {}", output.status))
+        Err(format!(
+            "route: {}: {}",
+            output.status,
+            String::from_utf8(output.stderr).unwrap()
+        ))
     }
 }
 
