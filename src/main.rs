@@ -20,8 +20,9 @@ mod utils;
 
 use std::sync::atomic::Ordering;
 
-extern "C" fn handle_signal(_: libc::c_int) {
+extern "C" fn handle_signal_interrupt(_: libc::c_int) {
     network::INTERRUPTED.store(true, Ordering::Relaxed);
+    std::process::exit(0);
 }
 
 fn main() {
@@ -32,8 +33,9 @@ fn main() {
     }
 
     unsafe {
-        libc::signal(libc::SIGINT, handle_signal as libc::sighandler_t);
-        libc::signal(libc::SIGTERM, handle_signal as libc::sighandler_t);
+        libc::signal(libc::SIGINT, handle_signal_interrupt as libc::sighandler_t);
+        libc::signal(libc::SIGTERM, handle_signal_interrupt as libc::sighandler_t);
+        libc::signal(libc::SIGKILL, handle_signal_interrupt as libc::sighandler_t);
     }
 
     match cli::get_args().unwrap() {
