@@ -116,7 +116,7 @@ pub fn add_route(route_type: RouteType, route: &str, gateway: &str) -> Result<()
         RouteType::Host => "-host",
     };
     info!("Adding route: {} {} gateway {}.", mode, route, gateway);
-    let status = if cfg!(target_os = "linux") {
+    let output = if cfg!(target_os = "linux") {
         Command::new("route")
             .arg("-n")
             .arg("add")
@@ -124,7 +124,7 @@ pub fn add_route(route_type: RouteType, route: &str, gateway: &str) -> Result<()
             .arg(route)
             .arg("gw")
             .arg(gateway)
-            .status()
+            .output()
             .unwrap()
     } else if cfg!(target_os = "macos") {
         Command::new("route")
@@ -133,15 +133,15 @@ pub fn add_route(route_type: RouteType, route: &str, gateway: &str) -> Result<()
             .arg(mode)
             .arg(route)
             .arg(gateway)
-            .status()
+            .output()
             .unwrap()
     } else {
         unimplemented!()
     };
-    if status.success() {
+    if (String::from_utf8(output.stdout).unwrap().contains("exists")) || output.status.success() {
         Ok(())
     } else {
-        Err(format!("route: {}", status))
+        Err(format!("route: {}", output.status))
     }
 }
 

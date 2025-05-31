@@ -221,6 +221,7 @@ pub fn connect(host: &str, port: u16, default: bool, secret: &str) {
                         } => {
                             if token == server_token {
                                 let decompressed_data = decoder.decompress_vec(&data).unwrap();
+
                                 let data_len = decompressed_data.len();
                                 let mut sent_len = 0;
                                 while sent_len < data_len {
@@ -252,6 +253,9 @@ pub fn connect(host: &str, port: u16, default: bool, secret: &str) {
                     key.seal_in_place_append_tag(nonce, aad, &mut encrypted_msg)
                         .unwrap();
                     let mut sent_len = 0;
+
+                    info!("message for {remote_addr}");
+
                     while sent_len < encrypted_msg.len() {
                         sent_len += sockfd
                             .send_to(&encrypted_msg[sent_len..encrypted_msg.len()], remote_addr)
