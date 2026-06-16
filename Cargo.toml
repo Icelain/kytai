@@ -5,17 +5,16 @@ authors = ["Chang Lan <me@changlan.org>", "Icelain <icelain@ice.computer>"]
 edition = "2024"
 
 [dependencies]
-libc = "*"
-mio = { version = "0.7", features = ["os-util", "os-poll", "udp"] }
-serde = "*"
-serde_derive = "*"
-log = "*"
-env_logger = "*"
-dns-lookup = "*"
-snap = "*"
-rand = "*"
-transient-hashmap = "*"
-ring = "*"
-clap = "2.33.0"
-bincode = { version = "2.0.1", features = ["alloc", "serde"] }
+libc = "0.2"
+mio = { version = "1", features = ["os-ext", "os-poll", "net"] }
+serde = { version = "1", features = ["derive"] }
+log = "0.4"
+env_logger = "0.11"
+dns-lookup = "3"
+snap = "1"
+rand = "0.10"
+transient-hashmap = "0.4"
+ring = "0.17"
+clap = { version = "4", features = ["derive"] }
+bincode = { version = "2", features = ["alloc", "serde"] }
 
