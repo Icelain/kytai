@@ -17,13 +17,13 @@ use crate::utils;
 use bincode::config::standard;
 use bincode::serde::{decode_from_slice, encode_to_vec};
 use log::{info, warn};
-use rand::{Rng, rng};
+use rand::{RngExt, rng};
 use ring::{aead, pbkdf2};
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use std::io::{Read, Write};
 use std::net::{IpAddr, SocketAddr, UdpSocket};
 use std::num::NonZeroU32;
-use std::os::unix::io::AsRawFd;
+use std::os::fd::AsRawFd;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use transient_hashmap::TransientHashMap;
@@ -53,8 +53,8 @@ const TUN: mio::Token = mio::Token(0);
 const SOCK: mio::Token = mio::Token(1);
 
 fn resolve(host: &str) -> Result<IpAddr, String> {
-    let ip_list = dns_lookup::lookup_host(host).map_err(|_| "dns_lookup::lookup_host")?;
-    Ok(*ip_list.first().unwrap())
+    let mut ip_list = dns_lookup::lookup_host(host).map_err(|_| "dns_lookup::lookup_host")?;
+    Ok(ip_list.next().unwrap())
 }
 
 fn create_tun_attempt() -> device::Tun {
@@ -441,6 +441,8 @@ mod tests {
 
     #[cfg(target_os = "linux")]
     use std::thread;
+    #[cfg(target_os = "linux")]
+    use std::time::Duration;
 
     #[test]
     fn resolve_test() {
@@ -453,11 +455,14 @@ mod tests {
     #[test]
     #[cfg(target_os = "linux")]
     fn integration_test() {
-        assert!(utils::is_root());
+        if !utils::is_root() {
+            eprintln!("skipping integration_test: requires root");
+            return;
+        }
         let _server =
             thread::spawn(move || serve(8964, "password", "8.8.8.8".parse::<IpAddr>().unwrap()));
 
-        thread::sleep(time::Duration::from_secs(1));
+        thread::sleep(Duration::from_secs(1));
         assert!(LISTENING.load(Ordering::Relaxed));
 
         let remote_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8964);
@@ -469,7 +474,7 @@ mod tests {
 
         let _client = thread::spawn(move || connect("127.0.0.1", 8964, false, "password"));
 
-        thread::sleep(time::Duration::from_secs(1));
+        thread::sleep(Duration::from_secs(1));
         assert!(CONNECTED.load(Ordering::Relaxed));
 
         INTERRUPTED.store(true, Ordering::Relaxed);
