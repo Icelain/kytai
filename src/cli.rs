@@ -1,4 +1,4 @@
-use clap::{App, Arg, SubCommand};
+use clap::{Parser, Subcommand};
 use std::net::{IpAddr, Ipv4Addr};
 use std::str::FromStr;
 
@@ -24,127 +24,78 @@ pub enum Args {
     Server(Server),
 }
 
+#[derive(Parser, Debug)]
+#[command(
+    name = "kytai",
+    version = "1.0",
+    about = "kytai: High Performance Peer-to-Peer VPN"
+)]
+struct Cli {
+    #[command(subcommand)]
+    command: Commands,
+}
+
+#[derive(Subcommand, Debug)]
+enum Commands {
+    /// Run in server mode
+    Server {
+        /// Listen address
+        #[arg(short = 'l', long = "listen", default_value = "0.0.0.0")]
+        bind: String,
+        /// Listen port
+        #[arg(short, long, default_value = "9527")]
+        port: u16,
+        /// Key for encrypted communication
+        #[arg(short, long)]
+        key: String,
+        /// DNS for clients
+        #[arg(short, long, default_value = "8.8.8.8")]
+        dns: String,
+    },
+    /// Run in client mode
+    Client {
+        /// Remote server address
+        #[arg(short, long)]
+        server: String,
+        /// Remote port
+        #[arg(short, long)]
+        port: u16,
+        /// Key for encrypted communication
+        #[arg(short, long)]
+        key: String,
+        /// Do not set default route
+        #[arg(short = 'n', long = "no-default-route")]
+        no_default_route: bool,
+    },
+}
+
 pub fn get_args() -> Result<Args, String> {
-    let matches = App::new("kytan: High Performance Peer-to-Peer VPN")
-        .version("1.0")
-        .subcommand(
-            SubCommand::with_name("server")
-                .help("client mode")
-                .arg(
-                    Arg::with_name("bind")
-                        .short("l")
-                        .long("listen")
-                        .default_value("0.0.0.0")
-                        .help("set the listen address")
-                        .takes_value(true),
-                )
-                .arg(
-                    Arg::with_name("port")
-                        .short("p")
-                        .long("port")
-                        .default_value("9527")
-                        .help("set the listen port")
-                        .takes_value(true),
-                )
-                .arg(
-                    Arg::with_name("key")
-                        .short("k")
-                        .long("key")
-                        .help("set the key for encryption communication")
-                        .takes_value(true),
-                )
-                .arg(
-                    Arg::with_name("dns")
-                        .short("d")
-                        .long("dns")
-                        .default_value("8.8.8.8")
-                        .help("set dns for client, default 8.8.8.8")
-                        .takes_value(true),
-                ),
-        )
-        .subcommand(
-            SubCommand::with_name("client")
-                .help("server mode")
-                .arg(
-                    Arg::with_name("server")
-                        .short("s")
-                        .long("server")
-                        .help("set the remote server address")
-                        .takes_value(true),
-                )
-                .arg(
-                    Arg::with_name("port")
-                        .short("p")
-                        .long("port")
-                        .help("set the remote port")
-                        .takes_value(true),
-                )
-                .arg(
-                    Arg::with_name("key")
-                        .short("k")
-                        .long("key")
-                        .help("set the key for encryption communication")
-                        .takes_value(true),
-                )
-                .arg(
-                    Arg::with_name("no-default-route")
-                        .short("n")
-                        .long("no-default-route")
-                        .help("do not set default route"),
-                ),
-        )
-        .get_matches();
-    if let Some(matches) = matches.subcommand_matches("client") {
-        let ip_str = matches
-            .value_of("server")
-            .ok_or("can not find client host value")
-            .unwrap();
-        let port_str = matches
-            .value_of("port")
-            .ok_or("can not find client port value")
-            .unwrap();
-        let key_str = matches
-            .value_of("key")
-            .ok_or("can not find client key value")
-            .unwrap();
-        // let remote_addr = IpAddr::V4(Ipv4Addr::from_str(ip_str).map_err(|e| e.to_string())?);
-        let port = port_str.parse::<u16>().map_err(|e| e.to_string())?;
-        let default_route = match matches.is_present("no-default-route") {
-            false => true,
-            true => false,
-        };
-        Ok(Args::Client(Client {
-            remote_addr: ip_str.to_string(),
+    let cli = Cli::parse();
+    match cli.command {
+        Commands::Client {
+            server,
             port,
-            key: key_str.to_string(),
-            default_route,
-        }))
-    } else if let Some(matches) = matches.subcommand_matches("server") {
-        let ip_str = matches
-            .value_of("bind")
-            .ok_or("can not find server host value")
-            .unwrap();
-        let port_str = matches
-            .value_of("port")
-            .ok_or("can not find server port value")
-            .unwrap();
-        let key_str = matches
-            .value_of("key")
-            .ok_or("can not find server key value")
-            .unwrap();
-        let dns = matches
-            .value_of("dns")
-            .ok_or("can not find dns value")?;
-        // let bind_addr = IpAddr::V4(Ipv4Addr::from_str(ip_str).map_err(|e| e.to_string())?);
-        let dns = IpAddr::V4(Ipv4Addr::from_str(dns).map_err(|e| e.to_string())?);
-        let port = port_str.parse::<u16>().map_err(|e| e.to_string())?;
-        Ok(Args::Server(Server {
-            bind_addr: ip_str.to_string(),
+            key,
+            no_default_route,
+        } => Ok(Args::Client(Client {
+            remote_addr: server,
             port,
-            key: key_str.to_string(),
+            key,
+            default_route: !no_default_route,
+        })),
+        Commands::Server {
+            bind,
+            port,
+            key,
             dns,
-        }))
-    } else {
-        unimplemented!()
+        } => {
+            let dns = IpAddr::V4(Ipv4Addr::from_str(&dns).map_err(|e| e.to_string())?);
+            Ok(Args::Server(Server {
+                bind_addr: bind,
+                port,
+                key,
+                dns,
+            }))
+        }
     }
 }
