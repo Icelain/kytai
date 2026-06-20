@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use log::info;
-use std::{os::unix::process::ExitStatusExt, process::Command};
+use std::process::Command;
 
 pub fn is_root() -> bool {
     unsafe { libc::geteuid() == 0 }
@@ -222,6 +222,10 @@ mod tests {
 
     #[test]
     fn enable_ipv4_forwarding_test() {
+        if !is_root() {
+            eprintln!("skipping enable_ipv4_forwarding_test: requires root");
+            return;
+        }
         enable_ipv4_forwarding().unwrap();
     }
     #[test]
@@ -234,7 +238,10 @@ mod tests {
     #[test]
     #[cfg(target_os = "linux")]
     fn route_test() {
-        assert!(is_root());
+        if !is_root() {
+            eprintln!("skipping route_test: requires root");
+            return;
+        }
         let gw = get_default_gateway().unwrap();
         add_route(RouteType::Host, "1.1.1.1", &gw).unwrap();
         assert!(get_route_gateway("1.1.1.1").unwrap().contains(&*gw));
@@ -243,7 +250,10 @@ mod tests {
     }
     #[test]
     fn set_dns_test() {
-        assert!(is_root());
+        if !is_root() {
+            eprintln!("skipping set_dns_test: requires root");
+            return;
+        }
         set_dns("8.8.8.8").unwrap();
     }
 }
